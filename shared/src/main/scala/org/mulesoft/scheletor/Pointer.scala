@@ -1,0 +1,49 @@
+package org.mulesoft.scheletor
+
+import org.mulesoft.scheletor.Pointer.{Idx, Prop}
+
+import scala.language.implicitConversions
+
+case class Pointer private (path: List[Pointer.Node]) {
+
+  def /(node: Pointer.Node): Pointer   = Pointer(path :+ node)
+  def /(propertyName: String): Pointer = this / Prop(propertyName)
+  def /(idx: Int): Pointer             = this / Idx(idx)
+
+  def ++(pointer: Pointer): Pointer = new Pointer(path ++ pointer.path)
+
+  def toList: List[Pointer.Node] = path
+  override def toString: String  = path.mkString("/", "/", "")
+}
+
+object Pointer extends Pointer(Nil) {
+
+  private final val Numeric = "[1-9][0-9]*".r
+
+  def empty: Pointer = this
+
+  def apply(path: String): Pointer =
+    if ((path eq null) || path.isEmpty || path == "/") empty
+    else
+      Pointer((path split "/").toList.tail map {
+        case "0"           => Idx(0)
+        case s @ Numeric() => Idx(s.toInt)
+        case s             => Prop(s.replace("~1", "/").replace("~0", "~"))
+      })
+
+  def apply(path: Node*): Pointer = if (path.isEmpty) empty else new Pointer(path.toList)
+
+  sealed trait Node
+
+  case class Idx(idx: Int) extends Node {
+    override def toString: String = idx.toString
+  }
+
+  implicit def intToIdx(n: Int): Pointer.Idx      = Pointer.Idx(n)
+  implicit def strToPropNode(s: String): Pointer.Prop = Pointer.Prop(s)
+
+  case class Prop(name: String) extends Node {
+    override def toString: String = name.replace("~", "~0").replace("/", "~1")
+  }
+
+}
