@@ -1,0 +1,3 @@
+package org.mule.scheletor
+
+class JvmCombinedValidatorTest extends CombinedValidatorTest
