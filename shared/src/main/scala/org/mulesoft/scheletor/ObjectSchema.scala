@@ -5,6 +5,8 @@ import org.mulesoft.scheletor.ObjLike._
 
 import scala.util.matching.Regex
 
+import Primitives._
+
 trait ObjectSchema extends Schema {
   def objectType: Boolean
   def minProperties: Option[Int]
@@ -77,7 +79,7 @@ trait ObjectSchema extends Schema {
     def validatePatternProperties(): Unit =
       for {
         (regex, schema) <- patternProperties
-        key             <- propertyKeys filter (regex.pattern.matcher(_).matches())
+        key             <- propertyKeys filter (regex.pattern.matcher(_).find())
       } schema.validate(obj(key), validator / key)
 
     def validateProperties(): Unit =
@@ -99,6 +101,6 @@ trait ObjectSchema extends Schema {
     }
 
     private def matchesAnyPattern(property: String) =
-      patternProperties.nonEmpty && patternProperties.keys.exists(_.pattern.matcher(property).matches())
+      patternProperties.nonEmpty && patternProperties.keys.exists(_.pattern.matcher(property).find())
   }
 }

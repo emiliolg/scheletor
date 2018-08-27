@@ -21,6 +21,7 @@ object ErrorType {
   final val NotUnique         = ErrorType("NotUnique", "It is duplicated")
   final val NotNull           = ErrorType("NotNull", "Null expected and value found")
   final val NoneMatched       = ErrorType("NoneMatched", "None of the schemas validate the input")
+  final val False             = ErrorType("False", "False Schema always fail")
 
   final val DoesNotContain =
     ErrorType("DoesNotContain", "Array does not contain any item that validates against the specified schema")
@@ -54,8 +55,8 @@ object ErrorType {
   final def InvalidProperty(name: String) =
     ErrorType("InvalidProperty", "Property '%s' was not allowed", name)
 
-    final def ConstFailed(expected: String, actual: String) =
-        ErrorType("ConstFailed", "Expecting: '%s', actual: '%s'", expected, actual)
+  final def ConstFailed(expected: String, actual: String) =
+    ErrorType("ConstFailed", "Expecting: '%s', actual: '%s'", expected, actual)
 
   final def MinItems(expected: Int, actual: Int) =
     ErrorType("MinItems", "Expecting a minimum of: %d items, actual: %d", expected, actual)
@@ -69,10 +70,12 @@ object ErrorType {
   final def ManyMatched(n: Int) =
     ErrorType("ManyMatched", "A total of %d schemas validate the input, instead of only one", n)
 
-  final def BadType(referenceName: String, typeName: String) = ErrorType("BadType", "%s must be a %s")
+  final def BadType(referenceName: String, typeName: String) =
+    ErrorType("BadType", "%s must be a %s", referenceName, typeName)
 
-  final def UnknownType(name: String) = ErrorType("UnknownType", "Unknown Type '%s'")
+  final def UnknownType(name: String) = ErrorType("UnknownType", "Unknown Type '%s'", name)
 
-  final def IllegalFormat(name: String) = ErrorType("IllegalFormat", "Illegal format validator '%s'")
+  final def IllegalFormat(name: String) = ErrorType("IllegalFormat", "Illegal format validator '%s'", name)
 
+  final def InvalidRef(ref: String) = ErrorType("InvalidRef", "Invalid reference '%s'", ref)
 }

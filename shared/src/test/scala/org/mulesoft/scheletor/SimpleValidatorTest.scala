@@ -5,6 +5,7 @@ import org.mulesoft.scheletor.SchemaBuilder._
 import org.scalatest.{FunSuite, Matchers}
 import org.yaml.model.{YNode, YSequence}
 import org.yaml.model.YDocument.{list, obj}
+import org.mulesoft.scheletor.syaml._
 
 trait SimpleValidatorTest extends FunSuite with Matchers {
 
@@ -124,6 +125,11 @@ trait SimpleValidatorTest extends FunSuite with Matchers {
     validate(false) shouldBe empty
     validate(null) shouldBe listOf(Nullable)
     validate("xxx") shouldBe listOf(NotBoolean)
+  }
+  test("True, False, Empty") {
+    validate(100)(TrueSchema) shouldBe empty
+    validate(100)(EmptySchema) shouldBe empty
+    validate(false)(FalseSchema) shouldBe listOf(False)
   }
 
   test("Enum Schema") {

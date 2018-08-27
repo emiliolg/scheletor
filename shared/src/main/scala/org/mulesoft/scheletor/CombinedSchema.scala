@@ -4,6 +4,7 @@ import org.mulesoft.scheletor.ErrorType._
 
 trait CombinedSchema extends Schema {
   def schemas: List[Schema]
+  def apply(idx: Int): Schema   = schemas(idx)
   override def toString: String = typeName + schemas.mkString("(", ",", ")")
 }
 
@@ -23,10 +24,10 @@ trait AllOfSchema extends CombinedSchema {
 }
 
 trait OneOfSchema extends CombinedSchema {
-    override def typeName: String = "oneOf"
-    override protected def innerValidate[V: ObjLike](input: V, validator: Validator): Unit = {
-        val n = schemas.count(validator.check(_, input))
-        if (n == 0) validator += NoneMatched
-        else if (n > 1) validator += ManyMatched(n)
-    }
+  override def typeName: String = "oneOf"
+  override protected def innerValidate[V: ObjLike](input: V, validator: Validator): Unit = {
+    val n = schemas.count(validator.check(_, input))
+    if (n == 0) validator += NoneMatched
+    else if (n > 1) validator += ManyMatched(n)
+  }
 }

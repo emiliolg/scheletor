@@ -5,6 +5,8 @@ import org.mulesoft.scheletor.SchemaBuilder._
 import org.scalatest.{FunSuite, Matchers}
 import org.yaml.model.YDocument.{list, obj}
 import org.yaml.model.{YDocument, YNode}
+import org.mulesoft.scheletor.syaml._
+import Primitives._
 
 trait ArrayValidatorTest extends FunSuite with Matchers {
   private def validate(doc: YDocument)(implicit schema: Schema)   = Validator.validate(schema, doc.node)
@@ -27,8 +29,13 @@ trait ArrayValidatorTest extends FunSuite with Matchers {
     implicit val schema: ArraySchema = arraySchema.contains(NullSchema).build
     validate(list(0)) shouldBe listOf(DoesNotContain)
     validate(list()) shouldBe listOf(DoesNotContain)
-
   }
+
+  test("Contains minimum") {
+    implicit val schema: ArraySchema = arraySchema.contains(numberSchema.minimum(5)).build
+    validate(list(2, 3, 4)) shouldBe listOf(DoesNotContain)
+  }
+
   test("Unique") {
     implicit val schema: ArraySchema = arraySchema.uniqueItems(true).build
 

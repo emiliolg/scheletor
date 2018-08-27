@@ -123,7 +123,9 @@ trait SimpleLoaderTest extends LoaderTest {
 
     }
 
-  test("Empty Schema") {
+  test("True, False, Empty Schema") {
+    load[TrueSchema](true)
+    load[FalseSchema](false)
     load[EmptySchema](YMap.empty)
   }
 
@@ -225,7 +227,7 @@ trait SimpleLoaderTest extends LoaderTest {
             additionalItems = false
         )
     )
-    schema.items should have size 3
+    schema.items should have size 5
     schema.allItems shouldBe None
     schema.items.head shouldBe a[NumberSchema]
     schema.items.head.asInstanceOf[NumberSchema].integer shouldBe true
@@ -257,7 +259,7 @@ trait SimpleLoaderTest extends LoaderTest {
     )
     val schemas = schema.schemas
 
-    schemas should have size 3
+    schemas should have size 5
     schemas.head shouldBe a[NumberSchema]
     schemas(1) shouldBe a[StringSchema]
     schemas(2) shouldBe a[BooleanSchema]

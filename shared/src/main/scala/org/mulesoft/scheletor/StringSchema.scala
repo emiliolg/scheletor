@@ -20,7 +20,7 @@ trait StringSchema extends Schema {
   }
 
   private def validate(s: String, validator: Validator): Unit = {
-    val length = s.length
+    val length = s.codePointCount(0, s.length)
     for {
       ml <- minLength
       if length < ml

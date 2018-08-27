@@ -15,8 +15,8 @@ object ObjectRecognizer extends TypeRecognizer.Instance("object") {
 
   override def createBuilder[V: ObjLike](loader: JsonSchemaLoader[V]): Builder = loadProperties(loader, objectSchema)
 
-  override def createBareBuilder[V: ObjLike](loader: JsonSchemaLoader[V]): Builder =
-    loadProperties(loader, new ObjBuilder(objectType = false))
+  override def createBareBuilder[V: ObjLike](loader: JsonSchemaLoader[V]): Option[Builder] =
+    Some(loadProperties(loader, new ObjBuilder(objectType = false)))
 
   private[jsonschema] def loadProperties[V: ObjLike](l: JsonSchemaLoader[V], builder: ObjBuilder): Builder = {
     l.ifPresent("minProperties")(v => builder.minProperties(v.asInt))
@@ -55,9 +55,9 @@ object ObjectRecognizer extends TypeRecognizer.Instance("object") {
       val dependency = l.Value(d, name)
 
       d.asArray match {
-        case Some(_)         => for (e <- dependency.asStringSeq) b.dependency(name, e)
-        case _ if d.isObject => b.dependency(name, dependency.loadSubSchema())
-        case _               => v.error("Array or Object")
+        case Some(_)               => for (e <- dependency.asStringSeq) b.dependency(name, e)
+        case _ if l.canBeSchema(d) => b.dependency(name, dependency.loadSubSchema())
+        case _                     => v.error("Array or Schema")
       }
     }
   }

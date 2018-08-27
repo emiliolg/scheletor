@@ -6,6 +6,7 @@ import org.scalatest.{FunSuite, Matchers}
 import org.yaml.model.{YMap, YNode}
 import org.yaml.model.YDocument.obj
 import org.yaml.model.YNode.Null
+import org.mulesoft.scheletor.syaml._
 
 trait ObjectValidatorTest extends FunSuite with Matchers {
   val emptyObj: YNode = YMap.empty

@@ -16,16 +16,16 @@ object SchemaLoader {
 
 }
 
-abstract class SchemaLoader[V: ObjLike](input: V, pointer: Pointer = Pointer.empty) { outer =>
+abstract class SchemaLoader[V: ObjLike](private val input: V, pointer: Pointer = Pointer.empty) { outer =>
 
-  private val obj        = input.asObject.getOrElse(emptyObj)
-  private val properties = obj.properties.to[mutable.Set]
+  protected val obj: Obj[V] = input.asObject.getOrElse(emptyObj)
+  private val properties    = obj.properties.to[mutable.Set]
 
   def error(loc: Pointer, errorType: ErrorType): Nothing = throw Exception(pointer ++ loc, errorType)
   def error(loc: String, errorType: ErrorType): Nothing  = throw Exception(pointer / loc, errorType)
 
-  final def loadSubSchema(input: V, loc: String): Schema  = createSubSchema(input, pointer / loc).load()
-  final def loadSubSchema(input: V, loc: Pointer): Schema = createSubSchema(input, pointer ++ loc).load()
+  final def loadSubSchema(input: V, loc: String): Schema  = createChildLoader(input, pointer / loc).load()
+  final def loadSubSchema(input: V, loc: Pointer): Schema = createChildLoader(input, pointer ++ loc).load()
 
   def typeError(loc: Pointer, referenceName: String, typeName: String): Nothing =
     throw Exception(pointer ++ loc, BadType(referenceName, typeName))
@@ -39,12 +39,20 @@ abstract class SchemaLoader[V: ObjLike](input: V, pointer: Pointer = Pointer.emp
   def get(key: String): Option[Value] =
     if (properties contains key) Some(value(key)) else None
 
+  def extract(pointer: Pointer): Option[V] = input.extract(pointer)
+
   def ifPresent(key: String)(op: Value => Unit): Unit =
     if (properties contains key) op(value(consume(key)))
 
+  def canBeSchema(v: V): Boolean = v.isObject
+
   def containsAnyOf(ps: Set[String]): Boolean = properties exists ps.contains
 
-  protected def createSubSchema(input: V, loc: Pointer): SchemaLoader[V]
+  def schemaFor(keyword: String): Option[Schema] = get(keyword).map(_.loadSubSchema())
+
+  def rootLoader: SchemaLoader[V]
+
+  protected def createChildLoader(input: V, loc: Pointer): SchemaLoader[V]
 
   final protected def consume(key: String): String = { properties -= key; key }
 
@@ -55,7 +63,7 @@ abstract class SchemaLoader[V: ObjLike](input: V, pointer: Pointer = Pointer.emp
   private def createBuilder(): Builder = recognizers.flatMap(_.extract(this)) match {
     case Nil     => emptySchema
     case List(s) => s
-    case l       => l.foldLeft(allOfSchema(true))(_.schema(_))
+    case l       => allOfSchema(true).schemas(l)
   }
 
   private def value(key: String): Value = Value(obj(key), key)
@@ -68,6 +76,7 @@ abstract class SchemaLoader[V: ObjLike](input: V, pointer: Pointer = Pointer.emp
     def asArray: Array[V]  = convertTo[Array[V]](_.asArray, "Array")
     def asObject: Obj[V]   = convertTo[Obj[V]](_.asObject, "Object")
     def isObject: Boolean  = value.isObject
+    def isArray: Boolean   = value.isArray
 
     def asStringSeq: Seq[String] = {
       val a = asArray
@@ -78,18 +87,15 @@ abstract class SchemaLoader[V: ObjLike](input: V, pointer: Pointer = Pointer.emp
       val a = asArray
       for (idx <- 0 until a.length) yield {
         val o = a(idx)
-        if (!o.isObject) error(idx, "Object")
-        outer.loadSubSchema(o, Pointer(name, idx))
+        if (canBeSchema(o)) outer.loadSubSchema(o, Pointer(name, idx))
+        else error(idx, "Not an Schema")
       }
     }
 
     def error[T](typeName: String): Nothing           = typeError(Pointer / name, name, typeName)
     def error[T](idx: Int, typeName: String): Nothing = typeError(Pointer(name, idx), name + "[" + idx + "]", typeName)
 
-    def loadSubSchema(): Schema = {
-        if (value.isObject) outer.loadSubSchema(value, name)
-        else error("Object")
-    }
+    def loadSubSchema(): Schema = if (canBeSchema(value)) outer.loadSubSchema(value, name) else error("Not an Schema")
 
     private def convertTo[T](convert: V => Option[T], typeName: String): T =
       convert(value).getOrElse(error(typeName))

@@ -44,6 +44,12 @@ object SchemaBuilder {
   final val NumberSchema  = numberSchema.doBuild()
   final val IntegerSchema = integerSchema.doBuild()
   final val StringSchema  = stringSchema.doBuild()
+  final val TrueSchema = new SchemaBuilder[TrueSchema]() {
+    override protected def doBuild(): TrueSchema = new SchemaImpl(this) with TrueSchema
+  }.build
+  final val FalseSchema = new SchemaBuilder[FalseSchema]() {
+    override protected def doBuild(): FalseSchema = new SchemaImpl(this) with FalseSchema
+  }.build
 
   // Builder for standard types
   def stringSchema                            = new Str()
@@ -54,14 +60,16 @@ object SchemaBuilder {
   def arraySchema                             = new Arr()
   def emptySchema                             = new Empty()
   def nullSchema                              = new Null()
-  def anyOfSchema                             = new AnyOf()
-  def oneOfSchema                             = new OneOf()
   def notSchema(schema: Schema)               = new Not(schema)
   def constSchema[V: ObjLike](value: V)       = new ConstBuilder(value)
   def enumSchema[V: ObjLike]                  = new Enum[V]()
   def allOfSchema(synthetic: Boolean = false) = new AllOf(synthetic)
+  def anyOfSchema(synthetic: Boolean = false) = new AnyOf(synthetic)
+  def oneOfSchema                             = new OneOf()
+  def reference(ref: String)                  = new RefBuilder(ref)
+  def boolConstSchema(b: Boolean): Schema     = if (b) TrueSchema else FalseSchema
 
-  def ifSchema(ifSchema: Schema, thenSchema: Schema = null, elseSchema: Schema = null) =
+  def ifSchema(ifSchema: Option[Schema], thenSchema: Option[Schema] = None, elseSchema: Option[Schema] = None) =
     new If(ifSchema, thenSchema, elseSchema)
 
   // Builder when type is not specified but attributes are type like
@@ -83,6 +91,10 @@ object SchemaBuilder {
   abstract class Combined[T <: CombinedSchema](val synthetic: Boolean = false) extends SchemaBuilder[T] {
     private[SchemaBuilder] var schemasBuilder = List.newBuilder[Schema]
     def schema(s: Schema): this.type          = { schemasBuilder += s; this }
+    def schemas(ss: Seq[SchemaBuilder[_ <: Schema]]): this.type = {
+      for (s <- ss) schemasBuilder += s.build
+      this
+    }
   }
 
   abstract class CombinedImpl[T <: CombinedSchema](builder: Combined[T])
@@ -115,12 +127,13 @@ object SchemaBuilder {
     }
   }
 
-  class If(ifSchema: Schema, thenSchema: Schema, elseSchema: Schema = null) extends SchemaBuilder[IfSchema] {
-    self =>
+  class If(ifSchema: Option[Schema], thenSchema: Option[Schema], elseSchema: Option[Schema])
+      extends SchemaBuilder[IfSchema] { outer =>
+
     def doBuild(): IfSchema = new SchemaImpl(this) with IfSchema {
-      val ifSchema: Option[Schema]   = Option(self.ifSchema)
-      val thenSchema: Option[Schema] = Option(self.thenSchema)
-      val elseSchema: Option[Schema] = Option(self.elseSchema)
+      val ifSchema: Option[Schema]   = outer.ifSchema
+      val thenSchema: Option[Schema] = outer.thenSchema
+      val elseSchema: Option[Schema] = outer.elseSchema
     }
   }
 
@@ -130,7 +143,7 @@ object SchemaBuilder {
 
     def value(v: V): this.type = {
       if (v == null || v.isNull) nullAllowed = true
-      if (values.forall(e => !deepEquals(e, v))) values += v
+      if (values.forall(_ !== v)) values += v
       this
     }
 
@@ -301,7 +314,7 @@ object SchemaBuilder {
     val contains: Option[Schema]              = builder.contains
   }
 
-  class AnyOf extends Combined[AnyOfSchema] {
+  class AnyOf(synthetic: Boolean) extends Combined[AnyOfSchema](synthetic) {
     override protected def doBuild(): AnyOfSchema = new CombinedImpl[AnyOfSchema](this) with AnyOfSchema
   }
   class AllOf(synthetic: Boolean) extends Combined[AllOfSchema](synthetic) {
@@ -311,4 +324,13 @@ object SchemaBuilder {
     override protected def doBuild(): OneOfSchema = new CombinedImpl[OneOfSchema](this) with OneOfSchema
   }
 
+  class RefBuilder(ref: String) extends SchemaBuilder[RefSchema] {
+    private val refSchema: RefSchema = new SchemaImpl(this) with RefSchema {
+      override def typeName: String       = "$ref"
+      override lazy val refSchema: Schema = schema.getOrElse(throw new IllegalStateException("Undefined Schema"))
+    }
+    var schema: Option[Schema] = None
+
+    override protected def doBuild(): RefSchema = refSchema
+  }
 }

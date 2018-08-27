@@ -9,16 +9,16 @@ sealed trait SpecVersion {
 }
 
 object Draft4 extends SpecVersion {
-  val id                                     = "Draft 4"
+  val id                                     = "Draft4"
   override def supportPropertyNames          = false
   override def supportArrayContains: Boolean = false
   override def idKeyword: String             = "id"
 }
 
 object Draft6 extends SpecVersion {
-  val id = "Draft 6"
+  val id = "Draft6"
 }
 
 object Draft7 extends SpecVersion {
-  val id = "Draft 7"
+  val id = "Draft7"
 }

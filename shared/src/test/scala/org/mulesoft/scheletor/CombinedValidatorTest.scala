@@ -4,6 +4,8 @@ import org.mulesoft.scheletor.ErrorType._
 import org.mulesoft.scheletor.SchemaBuilder._
 import org.scalatest.{FunSuite, Matchers}
 import org.yaml.model.YNode
+import org.mulesoft.scheletor.syaml._
+import Primitives._
 
 trait CombinedValidatorTest extends FunSuite with Matchers {
   private val multipleOf10 = integerSchema.multipleOf(10).build
@@ -31,7 +33,7 @@ trait CombinedValidatorTest extends FunSuite with Matchers {
   }
 
   test("Any Of") {
-    implicit val schema: Schema = anyOfSchema.schema(multipleOf10).schema(multipleOf3).build
+    implicit val schema: Schema = anyOfSchema().schema(multipleOf10).schema(multipleOf3).build
 
     validate(15) shouldBe empty
     validate(6) shouldBe empty
@@ -40,13 +42,13 @@ trait CombinedValidatorTest extends FunSuite with Matchers {
   }
 
   test("Empty Conditionals") {
-    validate("x")(ifSchema(null, BooleanSchema).build) shouldBe empty
-    validate("x")(ifSchema(BooleanSchema).build) shouldBe empty
-    validate("x")(ifSchema(null, null, BooleanSchema).build) shouldBe empty
+    validate("x")(ifSchema(None, Some(BooleanSchema)).build) shouldBe empty
+    validate("x")(ifSchema(Some(BooleanSchema)).build) shouldBe empty
+    validate("x")(ifSchema(None, None, Some(BooleanSchema)).build) shouldBe empty
   }
 
   test("If Then Conditionals") {
-    implicit val schema: Schema = ifSchema(StringSchema, stringSchema.minLength(5).build).build
+    implicit val schema: Schema = ifSchema(Some(StringSchema), Some(stringSchema.minLength(5).build)).build
 
     validate("abcdefg") shouldBe empty
     validate(10) shouldBe empty
@@ -54,7 +56,8 @@ trait CombinedValidatorTest extends FunSuite with Matchers {
   }
 
   test("If Else Conditionals") {
-    implicit val schema: Schema = ifSchema(BooleanSchema, elseSchema = stringSchema.minLength(5).build).build
+    implicit val schema: Schema =
+      ifSchema(Some(BooleanSchema), elseSchema = Some(stringSchema.minLength(5).build)).build
 
     validate(true) shouldBe empty
     validate("abcdefgh") shouldBe empty
@@ -63,7 +66,8 @@ trait CombinedValidatorTest extends FunSuite with Matchers {
   }
 
   test("If Then Else Conditionals") {
-    implicit val schema: Schema = ifSchema(NumberSchema, numberSchema.maximum(10.0), stringSchema.minLength(5))
+    implicit val schema: Schema =
+      ifSchema(Some(NumberSchema), Some(numberSchema.maximum(10.0)), Some(stringSchema.minLength(5)))
 
     validate(5) shouldBe empty
     validate("abcdefgh") shouldBe empty

@@ -79,7 +79,7 @@ trait ArraySchema extends Schema {
       var uniqueOnes = List.empty[V]
       while (idx < length) {
         val e = array(idx)
-        if (uniqueOnes exists (deepEquals(_, e))) (validator / idx) += NotUnique
+        if (uniqueOnes exists (_ === e)) (validator / idx) += NotUnique
         else uniqueOnes = e :: uniqueOnes
         idx += 1
       }

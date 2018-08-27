@@ -10,7 +10,7 @@ object CombinedRecognizer extends SchemaLoader.Recognizer {
 
   private val combineBuilders: Seq[(String, () => CBuilder)] = List(
       "allOf" -> (() => allOfSchema()),
-      "anyOf" -> (() => anyOfSchema),
+      "anyOf" -> (() => anyOfSchema()),
       "oneOf" -> (() => oneOfSchema)
   )
 

@@ -1,6 +1,7 @@
 package org.mulesoft.scheletor
 
 import org.mulesoft.scheletor.Pointer.{Idx, Prop}
+import ObjLike._
 
 import scala.language.implicitConversions
 
@@ -12,8 +13,10 @@ case class Pointer private (path: List[Pointer.Node]) {
 
   def ++(pointer: Pointer): Pointer = new Pointer(path ++ pointer.path)
 
-  def toList: List[Pointer.Node] = path
-  override def toString: String  = path.mkString("/", "/", "")
+  def extract[V: ObjLike](v: V): Option[V] = Pointer.extract(path, v)
+  def toList: List[Pointer.Node]           = path
+
+  override def toString: String = path.mkString("/", "/", "")
 }
 
 object Pointer extends Pointer(Nil) {
@@ -39,11 +42,17 @@ object Pointer extends Pointer(Nil) {
     override def toString: String = idx.toString
   }
 
-  implicit def intToIdx(n: Int): Pointer.Idx      = Pointer.Idx(n)
+  implicit def intToIdx(n: Int): Pointer.Idx          = Pointer.Idx(n)
   implicit def strToPropNode(s: String): Pointer.Prop = Pointer.Prop(s)
 
   case class Prop(name: String) extends Node {
     override def toString: String = name.replace("~", "~0").replace("/", "~1")
   }
+  private def extract[V: ObjLike](path: List[Pointer.Node], v: V): Option[V] = path match {
+    case Nil                           => Some(v)
+    case (x: Prop) :: xs if v.isObject => v.asObject flatMap (_.get(x.name)) flatMap (extract(xs, _))
+    case (x: Idx) :: xs                => v.asArray flatMap (_.get(x.idx)) flatMap (extract(xs, _))
+    case _                             => None
 
+  }
 }

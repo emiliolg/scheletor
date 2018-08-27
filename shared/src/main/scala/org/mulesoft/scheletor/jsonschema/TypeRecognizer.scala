@@ -22,24 +22,30 @@ object TypeRecognizer {
   abstract class Instance(val typeName: String) {
     def propertyNames: Set[String] = Set.empty
     def createBuilder[V: ObjLike](loader: JsonSchemaLoader[V]): Builder
-    def createBareBuilder[V: ObjLike](loader: JsonSchemaLoader[V]): Builder = throw IllegalStateException
+    def createBareBuilder[V: ObjLike](loader: JsonSchemaLoader[V]): Option[Builder] = None
   }
 }
 
 class TypeRecognizer(typeRecognizerInstances: TypeRecognizer.Instance*) extends SchemaLoader.Recognizer {
   private val instances = typeRecognizerInstances.map(i => i.typeName -> i).toMap
 
-  override def extract[V: ObjLike](l: SchemaLoader[V]): Seq[Builder] =
-    l.get("type")
-      .map { t =>
-        val instance = instances.getOrElse(t.asString, l.error("type", UnknownType("typeName")))
-        instance.createBuilder(l.asInstanceOf[JsonSchemaLoader[V]])
-      }
-      .toSeq
+  override def extract[V: ObjLike](l: SchemaLoader[V]): Seq[Builder] = {
+    val loader = l.asInstanceOf[JsonSchemaLoader[V]]
+    l.get("type") match {
+      case Some(v) =>
+        Seq(
+            if (v.isArray) anyOfSchema(true).schemas(v.asStringSeq.map(extractForType(loader, _)))
+            else extractForType(loader, v.asString)
+        )
+      case _ => Nil
+    }
+  }
 
+  private def extractForType[V: ObjLike](l: JsonSchemaLoader[V], typeName: String): Builder =
+    instances.getOrElse(typeName, l.error("type", UnknownType(typeName))).createBuilder(l)
 }
 object TypeLessRecognizer {
-  def apply(): TypeRecognizer = new TypeRecognizer(
+  def apply(): TypeLessRecognizer = new TypeLessRecognizer(
       NumberRecognizer,
       StringRecognizer,
       ArrayRecognizer,
@@ -48,11 +54,14 @@ object TypeLessRecognizer {
 }
 
 class TypeLessRecognizer(instances: TypeRecognizer.Instance*) extends SchemaLoader.Recognizer {
-  override def extract[V: ObjLike](l: SchemaLoader[V]): Seq[Builder] =
+  override def extract[V: ObjLike](l: SchemaLoader[V]): Seq[Builder] = {
+    val loader = l.asInstanceOf[JsonSchemaLoader[V]]
     for {
       i <- instances
       if l.containsAnyOf(i.propertyNames)
-    } yield i.createBareBuilder(l.asInstanceOf[JsonSchemaLoader[V]])
+      b <- i.createBareBuilder(loader)
+    } yield b
+  }
 }
 
 object IntegerRecognizer extends TypeRecognizer.Instance("integer") {
@@ -73,7 +82,8 @@ object StringRecognizer extends TypeRecognizer.Instance("string") {
 
   override def createBuilder[V: ObjLike](loader: JsonSchemaLoader[V]): Builder = loadProperties(loader, stringSchema)
 
-  override def createBareBuilder[V: ObjLike](l: JsonSchemaLoader[V]): Builder = loadProperties(l, new Str(false))
+  override def createBareBuilder[V: ObjLike](l: JsonSchemaLoader[V]): Option[Builder] =
+    Some(loadProperties(l, new Str(false)))
 
   private def loadProperties[V: ObjLike](l: JsonSchemaLoader[V], builder: Str) = {
     l.ifPresent("minLength")(v => builder.minLength(v.asInt))
@@ -94,8 +104,8 @@ object NumberRecognizer extends TypeRecognizer.Instance("number") {
 
   override def createBuilder[V: ObjLike](loader: JsonSchemaLoader[V]): Builder = loadProperties(loader, numberSchema)
 
-  override def createBareBuilder[V: ObjLike](l: JsonSchemaLoader[V]): Builder =
-    loadProperties(l, new Num(numberType = false))
+  override def createBareBuilder[V: ObjLike](l: JsonSchemaLoader[V]): Option[Builder] =
+    Some(loadProperties(l, new Num(numberType = false)))
 
   private[jsonschema] def loadProperties[V: ObjLike](l: JsonSchemaLoader[V], builder: Num) = {
     l.ifPresent("minimum")(v => builder.minimum(v.asDouble))
