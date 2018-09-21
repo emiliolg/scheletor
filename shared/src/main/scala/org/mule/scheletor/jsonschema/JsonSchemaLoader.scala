@@ -6,21 +6,22 @@ import org.mule.scheletor.SchemaLoader.{Builder, Recognizer}
 import org.mule.scheletor._
 
 object JsonSchemaLoader {
-  def load[V: ObjLike](input: V, version: SpecVersion = Draft7): Schema =
-    new JsonSchemaLoader(input, version, Pointer.empty).load()
+  def load[V: ObjLike](document: Document[V], version: SpecVersion = Draft7): Schema =
+    new JsonSchemaLoader(document.rootNode, version, Pointer.empty).load()
 
 }
 
 class JsonSchemaLoader[V: ObjLike](input: V,
-                                   val version: SpecVersion,
+                                       val version: SpecVersion,
                                    pointer: Pointer,
                                    root: Option[JsonSchemaLoader[V]] = None)
     extends SchemaLoader[V](input, pointer) {
 
   private val booleanSchema = input.asBoolean.map(boolConstSchema)
 
-  override val rootLoader: JsonSchemaLoader[V]    = root.getOrElse(this)
-  private val referenceLoader: ReferenceLoader[V] = root.map(_.referenceLoader).getOrElse(new ReferenceLoader(this, obj))
+  override val rootLoader: JsonSchemaLoader[V] = root.getOrElse(this)
+  private val referenceLoader: ReferenceLoader[V] =
+    root.map(_.referenceLoader).getOrElse(new ReferenceLoader(this, obj))
 
   override def load(): Schema = booleanSchema.getOrElse {
     get("$ref") match {
@@ -55,5 +56,5 @@ class JsonSchemaLoader[V: ObjLike](input: V,
     // default ??
   }
 
-  override def canBeSchema(v: V): Boolean = v.isObject || v.asBoolean.isDefined
+  override def canBeSchema(v: V): Boolean = v.asObject.isDefined || v.asBoolean.isDefined
 }

@@ -1,7 +1,9 @@
 package org.mule.scheletor
 
-import org.yaml.model.{YMap, YNode, YSequence}
+import org.yaml.model.{YDocument, YMap, YNode, YSequence}
 import org.mule.scheletor.ObjLike._
+
+import scala.language.implicitConversions
 
 package object syaml {
 
@@ -10,8 +12,6 @@ package object syaml {
     */
   implicit object ObjLikeYNode extends ObjLike[YNode] {
     override def isNull(node: YNode): Boolean         = node == null || node.isNull
-    override def isArray(v: YNode): Boolean           = v.value.isInstanceOf[YSequence]
-    override def isObject(v: YNode): Boolean          = v.value.isInstanceOf[YMap]
     override def asBoolean(v: YNode): Option[Boolean] = v.asOption[Boolean]
     override def asString(v: YNode): Option[String]   = v.asOption[String]
     override def asInt(v: YNode): Option[Int]         = v.asOption[Int]
@@ -36,5 +36,9 @@ package object syaml {
       override def length: Int               = sequence.nodes.length
       override def apply(offset: Int): YNode = sequence.nodes(offset)
     }
+  }
+
+  implicit class Document(val doc: YDocument) extends ObjLike.Document[YNode] {
+    override def rootNode: YNode = doc.node
   }
 }

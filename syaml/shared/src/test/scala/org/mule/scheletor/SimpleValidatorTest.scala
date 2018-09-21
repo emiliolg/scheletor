@@ -2,14 +2,16 @@ package org.mule.scheletor
 
 import org.mule.scheletor.ErrorType._
 import org.mule.scheletor.SchemaBuilder._
-import org.scalatest.{FunSuite, Matchers}
-import org.yaml.model.{YNode, YSequence}
-import org.yaml.model.YDocument.{list, obj}
+import org.mule.scheletor.Validator.NoContext
 import org.mule.scheletor.syaml._
+import org.scalatest.{FunSuite, Matchers}
+import org.yaml.model.YDocument.{list, obj}
+import org.yaml.model.{YNode, YSequence}
 
 trait SimpleValidatorTest extends FunSuite with Matchers {
 
-  private def validate(node: YNode)(implicit schema: Schema) = Validator.validate(schema, node)
+  private def validate(node: YNode)(implicit schema: Schema) =
+    new Validator(10, NoContext).validate(schema, node)
 
   private def listOf(errors: ErrorType*) = errors.map(ValidationError("/", _)).toList
 

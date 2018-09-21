@@ -2,16 +2,15 @@ package org.mule.scheletor
 
 import org.mule.scheletor.ErrorType._
 import org.mule.scheletor.SchemaBuilder._
-import org.scalatest.{FunSuite, Matchers}
-import org.yaml.model.YNode
 import org.mule.scheletor.syaml._
-import Primitives._
+import org.scalatest.{FunSuite, Matchers}
+import org.yaml.model.{YDocument, YNode}
 
 trait CombinedValidatorTest extends FunSuite with Matchers {
   private val multipleOf10 = integerSchema.multipleOf(10).build
   private val multipleOf3  = integerSchema.multipleOf(3).build
 
-  private def validate(node: YNode)(implicit schema: Schema) = Validator.validate(schema, node)
+  private def validate(node: YNode)(implicit schema: Schema) = YDocument(node).validate(schema)
 
   private def listOf(errors: ErrorType*) = errors.map(ValidationError("/", _)).toList
 

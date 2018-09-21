@@ -2,7 +2,7 @@ package org.mule.scheletor.jsonschema
 
 import org.mule.scheletor.ObjLike
 import org.mule.scheletor.ObjLike._
-import org.mule.scheletor.SchemaBuilder.{objectSchema, ObjBuilder}
+import org.mule.scheletor.SchemaBuilder.{ObjBuilder, objectSchema}
 import org.mule.scheletor.SchemaLoader.Builder
 
 object ObjectRecognizer extends TypeRecognizer.Instance("object") {
@@ -43,9 +43,9 @@ object ObjectRecognizer extends TypeRecognizer.Instance("object") {
 
   private def loadAdditionalProperties[V: ObjLike](l: JsonSchemaLoader[V], b: ObjBuilder)(v: l.Value): Unit = {
     v.value.asBoolean match {
-      case Some(bool)            => b.additionalProperties(bool)
-      case _ if v.value.isObject => b.additionalProperties(v.loadSubSchema())
-      case _                     => v.error("Boolean or Object")
+      case Some(bool)      => b.additionalProperties(bool)
+      case _ if v.isObject => b.additionalProperties(v.loadSubSchema())
+      case _               => v.error("Boolean or Object")
     }
   }
 

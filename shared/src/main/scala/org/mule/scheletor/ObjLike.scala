@@ -1,4 +1,5 @@
 package org.mule.scheletor
+import org.mule.scheletor.Validator.{Context, NoContext}
 
 /**
   * An ObjLike is a type class for defining Object Like structures with the follow basic structure:
@@ -15,8 +16,6 @@ package org.mule.scheletor
   */
 trait ObjLike[V] {
   def isNull(v: V): Boolean
-  def isArray(v: V): Boolean                  = asArray(v).isDefined
-  def isObject(v: V): Boolean                 = asObject(v).isDefined
   def asBoolean(v: V): Option[Boolean]        = None
   def asString(v: V): Option[String]          = None
   def asLong(v: V): Option[Long]              = asInt(v).map(_.asInstanceOf[Long])
@@ -29,7 +28,21 @@ trait ObjLike[V] {
 
 object ObjLike {
 
-  // Inner traits
+  // Inner classes and traits
+
+  /**
+    * Document is the Entry point to the validation process
+    * To implement it you only need to implement a method to return the root node of the document
+    * that implements the [[ObjLike]] type class
+    * Usually as an implicit class.
+    */
+  abstract class Document[N: ObjLike] {
+    def rootNode: N
+    def validate(schema: Schema,
+                 errorLimit: Int = Int.MaxValue,
+                 context: Context = NoContext): List[ValidationError] =
+      new Validator(errorLimit, context).validate(schema, rootNode)
+  }
 
   /** Composite Object similar to a {{{Map[String,ObjLike]}}} */
   trait Obj[V] {
@@ -42,7 +55,7 @@ object ObjLike {
   trait Array[V] extends IndexedSeq[V] {
     def length: Int
     def apply(offset: Int): V
-    def get(offset: Int): Option[V] = if (offset>=0 && offset<length) Some(apply(offset)) else None
+    def get(offset: Int): Option[V] = if (offset >= 0 && offset < length) Some(apply(offset)) else None
   }
 
   /** The empty composite Object */
@@ -56,8 +69,6 @@ object ObjLike {
   /** ObjOps implements operations on V:ObjLike mostly by delegation to the ObjLike[V] trait */
   implicit class ObjOps[V](val v: V) extends AnyVal {
     def isNull(implicit o: ObjLike[V]): Boolean            = v == null || o.isNull(v)
-    def isArray(implicit o: ObjLike[V]): Boolean           = o.isArray(v)
-    def isObject(implicit o: ObjLike[V]): Boolean          = o.isObject(v)
     def asObject(implicit o: ObjLike[V]): Option[Obj[V]]   = o.asObject(v)
     def asArray(implicit o: ObjLike[V]): Option[Array[V]]  = o.asArray(v)
     def asBoolean(implicit o: ObjLike[V]): Option[Boolean] = o.asBoolean(v)
@@ -91,11 +102,12 @@ object ObjLike {
                 }
             }
         }
+
     /** Deep not equals */
     def !==[W: ObjLike](w: W)(implicit o: ObjLike[V]): Boolean = !(v === w)
 
     /** Given a [[org.mule.scheletor.Pointer]] navigates to the element defined by it */
     def extract(pointer: Pointer)(implicit o: ObjLike[V]): Option[V] = pointer.extract(v)
-    def extract(pointer: String)(implicit o: ObjLike[V]): Option[V] = extract(Pointer(pointer))
+    def extract(pointer: String)(implicit o: ObjLike[V]): Option[V]  = extract(Pointer(pointer))
   }
 }

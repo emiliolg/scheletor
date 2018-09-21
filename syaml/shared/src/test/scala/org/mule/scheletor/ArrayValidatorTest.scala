@@ -2,16 +2,15 @@ package org.mule.scheletor
 
 import org.mule.scheletor.ErrorType._
 import org.mule.scheletor.SchemaBuilder._
+import org.mule.scheletor.syaml._
 import org.scalatest.{FunSuite, Matchers}
 import org.yaml.model.YDocument.{list, obj}
 import org.yaml.model.{YDocument, YNode}
-import org.mule.scheletor.syaml._
-import Primitives._
 
 trait ArrayValidatorTest extends FunSuite with Matchers {
-  private def validate(doc: YDocument)(implicit schema: Schema)   = Validator.validate(schema, doc.node)
-  private def listOf(errors: ErrorType*) = errors.map(ValidationError("/", _)).toList
-  private def error(location: String, errorType: ErrorType) = ValidationError(Pointer(location), errorType)
+  private def validate(doc: YDocument)(implicit schema: Schema) = doc.validate(schema)
+  private def listOf(errors: ErrorType*)                        = errors.map(ValidationError("/", _)).toList
+  private def error(location: String, errorType: ErrorType)     = ValidationError(Pointer(location), errorType)
 
   test("Min Max Items") {
     implicit val schema: ArraySchema = arraySchema.minItems(2).maxItems(3).build
@@ -54,30 +53,31 @@ trait ArrayValidatorTest extends FunSuite with Matchers {
     validate(list(true, false, "true")) shouldBe List(error("/2", NotBoolean))
   }
   test("Tuple like") {
-      implicit val schema: ArraySchema = arraySchema.item(BooleanSchema).additionalItems(false).build
+    implicit val schema: ArraySchema = arraySchema.item(BooleanSchema).additionalItems(false).build
 
-      validate(list(true)) shouldBe empty
-      validate(list("true")) shouldBe List(error("/0", NotBoolean))
-      validate(list(true, false)) shouldBe listOf(MaxItems(1, 2))
+    validate(list(true)) shouldBe empty
+    validate(list("true")) shouldBe List(error("/0", NotBoolean))
+    validate(list(true, false)) shouldBe listOf(MaxItems(1, 2))
 
-      validate(list(YNode.Null))(arraySchema.item(EmptySchema).item(BooleanSchema).build) shouldBe empty
+    validate(list(YNode.Null))(arraySchema.item(EmptySchema).item(BooleanSchema).build) shouldBe empty
   }
   test("Array not specified") {
-      implicit val schema: ArraySchema = arrayLikeSchema.uniqueItems(true).build
+    implicit val schema: ArraySchema = arrayLikeSchema.uniqueItems(true).build
 
-      Validator.validate(schema, "x") shouldBe empty
-      validate(list( obj( a = "b"), "x")) shouldBe empty
+    YDocument(YNode("x")).validate(schema) shouldBe empty
 
-      validate(list( obj( a = "b"), "x", obj(a = "b"))) shouldBe List(error("/2", NotUnique))
+    validate(list(obj(a = "b"), "x")) shouldBe empty
+
+    validate(list(obj(a = "b"), "x", obj(a = "b"))) shouldBe List(error("/2", NotUnique))
 
   }
 
-    test("Additional Item Schema") {
-        implicit val schema: ArraySchema = arrayLikeSchema.item(BooleanSchema).additionalItems(NullSchema).build
+  test("Additional Item Schema") {
+    implicit val schema: ArraySchema = arrayLikeSchema.item(BooleanSchema).additionalItems(NullSchema).build
 
-        validate(list(true, YNode.Null, YNode.Null)) shouldBe empty
-        validate(list(true, YNode.Null, false)) shouldBe List(error("/2", NotNull))
+    validate(list(true, YNode.Null, YNode.Null)) shouldBe empty
+    validate(list(true, YNode.Null, false)) shouldBe List(error("/2", NotNull))
 
-    }
+  }
 
 }

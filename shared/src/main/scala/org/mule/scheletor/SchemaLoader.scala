@@ -40,12 +40,12 @@ abstract class SchemaLoader[V: ObjLike](private val input: V, pointer: Pointer =
   def get(key: String): Option[Value] =
     if (properties contains key) Some(value(key)) else None
 
-  def extract(pointer: Pointer): Option[V] = input.extract(pointer)
+  def extract(pointer: Pointer): Option[V] = pointer.extract(input)
 
   def ifPresent(key: String)(op: Value => Unit): Unit =
     if (properties contains key) op(value(consume(key)))
 
-  def canBeSchema(v: V): Boolean = v.isObject
+  def canBeSchema(v: V): Boolean = v.asObject.isDefined
 
   def containsAnyOf(ps: Set[String]): Boolean = properties exists ps.contains
 
@@ -70,14 +70,19 @@ abstract class SchemaLoader[V: ObjLike](private val input: V, pointer: Pointer =
   private def value(key: String): Value = Value(obj(key), key)
 
   case class Value(value: V, name: String) {
+
+    private lazy val arrayValue: Option[Array[V]] = value.asArray
+    private lazy val objectValue: Option[Obj[V]]  = value.asObject
+
     def asBoolean: Boolean = convertTo[Boolean](_.asBoolean, "Boolean")
     def asString: String   = convertTo[String](_.asString, "String")
     def asInt: Int         = convertTo[Int](_.asInt, "Int")
     def asDouble: Double   = convertTo[Double](_.asDouble, "Double")
-    def asArray: Array[V]  = convertTo[Array[V]](_.asArray, "Array")
-    def asObject: Obj[V]   = convertTo[Obj[V]](_.asObject, "Object")
-    def isObject: Boolean  = value.isObject
-    def isArray: Boolean   = value.isArray
+
+    def isObject: Boolean = objectValue.isDefined
+    def isArray: Boolean  = arrayValue.isDefined
+    def asArray: Array[V] = arrayValue.getOrElse(error("Array"))
+    def asObject: Obj[V]  = objectValue.getOrElse(error("Object"))
 
     def asStringSeq: Seq[String] = {
       val a = asArray

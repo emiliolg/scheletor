@@ -1,7 +1,7 @@
 package org.mule.scheletor
 
+import org.mule.scheletor.ObjLike._
 import org.mule.scheletor.Pointer.{Idx, Prop}
-import ObjLike._
 
 import scala.language.implicitConversions
 
@@ -49,10 +49,10 @@ object Pointer extends Pointer(Nil) {
     override def toString: String = name.replace("~", "~0").replace("/", "~1")
   }
   private def extract[V: ObjLike](path: List[Pointer.Node], v: V): Option[V] = path match {
-    case Nil                           => Some(v)
-    case (x: Prop) :: xs if v.isObject => v.asObject flatMap (_.get(x.name)) flatMap (extract(xs, _))
-    case (x: Idx) :: xs                => v.asArray flatMap (_.get(x.idx)) flatMap (extract(xs, _))
-    case _                             => None
+    case Nil             => Some(v)
+    case (x: Prop) :: xs => v.asObject flatMap (_.get(x.name)) flatMap (extract(xs, _))
+    case (x: Idx) :: xs  => v.asArray flatMap (_.get(x.idx)) flatMap (extract(xs, _))
+    case _               => None
 
   }
 }

@@ -3,7 +3,7 @@ package org.mule.scheletor
 import org.mule.scheletor.ErrorType._
 import org.mule.scheletor.SchemaBuilder._
 import org.scalatest.{FunSuite, Matchers}
-import org.yaml.model.{YMap, YNode}
+import org.yaml.model.{YDocument, YMap, YNode}
 import org.yaml.model.YDocument.obj
 import org.yaml.model.YNode.Null
 import org.mule.scheletor.syaml._
@@ -11,7 +11,7 @@ import org.mule.scheletor.syaml._
 trait ObjectValidatorTest extends FunSuite with Matchers {
   val emptyObj: YNode = YMap.empty
 
-  private def validate(doc: YNode)(implicit schema: Schema) = Validator.validate(schema, doc)
+  private def validate(doc: YDocument)(implicit schema: Schema) = doc.validate(schema)
   private def listOf(errors: ErrorType*)                        = errors.map(ValidationError("/", _)).toList
   private def error(location: String, errorType: ErrorType)     = ValidationError(Pointer(location), errorType)
 

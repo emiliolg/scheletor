@@ -34,24 +34,24 @@ trait JsonTestSuite extends FunSuite with Matchers {
     val testName = s"Json (${draft.id}): $file - ${testDoc.description}"
 
     test(testName) {
-      val schema = JsonSchemaLoader.load(asNode(testDoc.schema), draft)
+      val schema = JsonSchemaLoader.load(asDoc(testDoc.schema), draft)
       for {
         t <- testDoc.tests.as[Seq[YNode]]
         to    = t.obj
-        data  = asNode(to.data)
+        data  = asDoc(to.data)
         valid = to.valid.as[Boolean]
         descr = t.obj.description.as[String]
         if testDescription.isEmpty || testDescription == descr
       } {
 
-        val errors = Validator.validate(schema, data)
+        val errors = data.validate(schema)
         if (errors.isEmpty != valid) fail(descr)
       }
     }
   }
 
-  def asNode(obj: YObj): YNode = obj match {
-    case YSuccess(node) => node
+  def asDoc(obj: YObj): YDocument = obj match {
+    case YSuccess(node) => YDocument(node)
     case YFail(err) =>
       fail(err.error)
   }

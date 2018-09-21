@@ -1,14 +1,16 @@
 package org.mule.scheletor.jsonschema
 
 import org.mule.scheletor.ErrorType.OutOfRange
-import org.mule.scheletor._
 import org.mule.scheletor.SchemaBuilder.reference
-import org.mule.scheletor.Validator.validate
-import org.yaml.model.YDocument.obj
+import org.mule.scheletor._
 import org.mule.scheletor.syaml._
+import org.yaml.model.YDocument.obj
+import org.yaml.model.{YDocument, YNode}
 
 trait RefSchemaTest extends LoaderTest {
   private def error(location: String, errorType: ErrorType) = ValidationError(Pointer(location), errorType)
+
+  private def validate(node:YNode, schema: Schema) = YDocument(node).validate(schema)
 
   test("construction") {
     val r = reference("#/a/b")
@@ -39,8 +41,8 @@ trait RefSchemaTest extends LoaderTest {
     n.minimum.value shouldBe 1
     n.maximum.value shouldBe 9
 
-    validate(schema, obj(pointer = 7, b = 100)) shouldBe empty
-    validate(schema, obj(pointer = 100, b = 100)) shouldBe List(error("/pointer", OutOfRange(100, "greater than", 9.0)))
+    validate(obj(pointer = 7, b = 100), schema) shouldBe empty
+    validate(obj(pointer = 100, b = 100), schema) shouldBe List(error("/pointer", OutOfRange(100, "greater than", 9.0)))
 
   }
 
@@ -71,8 +73,8 @@ trait RefSchemaTest extends LoaderTest {
     ps("value").as[NumberSchema].integer shouldBe true
     ps("next").as[RefSchema].refSchema.as[ObjectSchema] should be theSameInstanceAs list
 
-    validate(schema, obj(pointer = null, b = 100)) shouldBe empty
-    validate(schema, obj(pointer = obj(value = 1, next = obj(value = 2, next = null)))) shouldBe empty
+    validate(obj(pointer = null, b = 100), schema) shouldBe empty
+    validate(obj(pointer = obj(value = 1, next = obj(value = 2, next = null))), schema) shouldBe empty
   }
 
 }
